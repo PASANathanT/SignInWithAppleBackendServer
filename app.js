@@ -7,6 +7,12 @@ const bodyParser = require('body-parser')
 const jwt = require('jsonwebtoken');
 
 const getClientSecret = () => {
+  console.log('getClientSecret ENV:', {
+    KEY_ID: process.env.KEY_ID,
+    TEAM_ID: process.env.TEAM_ID,
+    SERVICE_ID: process.env.SERVICE_ID,
+    PRIVATE_KEY_FILE: process.env.PRIVATE_KEY_FILE,
+  });
 
   const time = new Date().getTime() / 1000; // Current time in seconds since Epoch
   const privateKey = fs.readFileSync(process.env.PRIVATE_KEY_FILE);
@@ -35,6 +41,9 @@ const getClientSecret = () => {
 app.post('/callback', bodyParser.urlencoded({
   extended: true
 }), (req, res) => {
+  console.log('--- /callback HIT ---');
+  console.log('Body:', req.body);
+  
   if (res.statusCode == 200) {
     var returnURL = ""
     var firstName = ""
