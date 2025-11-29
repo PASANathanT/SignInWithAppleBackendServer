@@ -166,5 +166,45 @@ app.post('/callback', bodyParser.urlencoded({ extended: true }), (req, res) => {
   }
 })
 */
+
+
+// Helper to build the dev token
+const fs = require('fs');
+const jwt = require('jsonwebtoken');
+
+function getMusicKitDeveloperToken() {
+  const privateKey = fs.readFileSync(process.env.MUSICKIT_PRIVATE_KEY_FILE);
+
+  const now = Math.floor(Date.now() / 1000);
+  const fiveMonths = 60 * 60 * 24 * 30 * 5; // Apple allows up to ~6 months
+
+  const payload = {
+    iss: process.env.MUSICKIT_TEAM_ID,
+    iat: now,
+    exp: now + fiveMonths,
+  };
+
+  const token = jwt.sign(payload, privateKey, {
+    algorithm: 'ES256',
+    header: {
+      kid: process.env.MUSICKIT_KEY_ID,
+    },
+  });
+
+  return token;
+}
+
+app.get('/apple-music/developer-token', (req, res) => {
+  try {
+    const token = getMusicKitDeveloperToken();
+    res.json({ developerToken: token });
+  } catch (err) {
+    console.error('Error generating MusicKit dev token', err);
+    res.status(500).json({ error: 'failed_to_generate_token' });
+  }
+});
+
+//
+
 var port = process.env.PORT;
 app.listen(port, () => console.log(`Your app is listening on port ` + port + '.'))
