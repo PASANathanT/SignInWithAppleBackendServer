@@ -169,9 +169,6 @@ app.post('/callback', bodyParser.urlencoded({ extended: true }), (req, res) => {
 
 
 // Helper to build the dev token
-const fs = require('fs');
-const jwt = require('jsonwebtoken');
-
 function getMusicKitDeveloperToken() {
   const privateKey = fs.readFileSync(process.env.MUSICKIT_PRIVATE_KEY_FILE);
 
