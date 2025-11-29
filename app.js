@@ -58,7 +58,50 @@ const getClientSecret = () => {
   return token
 }
 
-app.post('/callback', bodyParser.urlencoded({
+app.post('/callback', bodyParser.urlencoded({ extended: true }), (req, res) => {
+  console.log('--- /callback HIT ---')
+  console.log('Body:', req.body)
+
+  try {
+    let firstName = ''
+    let middleName = ''
+    let lastName = ''
+    let email = ''
+
+    if (req.body.user) {
+      const user = JSON.parse(req.body.user)
+      if (user.name) {
+        if (user.name.firstName) firstName = user.name.firstName
+        if (user.name.middleName) middleName = user.name.middleName
+        if (user.name.lastName) lastName = user.name.lastName
+      }
+      if (user.email) email = user.email
+    }
+
+    const code = req.body.code
+    const clientSecret = getClientSecret()
+
+    const params = new URLSearchParams({
+      success: 'true',
+      code: code,
+      client_secret: clientSecret,
+      ...(firstName && { first_name: firstName }),
+      ...(middleName && { middle_name: middleName }),
+      ...(lastName && { last_name: lastName }),
+      ...(email && { email: email }),
+    })
+
+    const deepLink = `pasa-mediaplayer://signin-with-apple/callback?${params.toString()}`
+
+    console.log('Redirecting to deep link:', deepLink)
+    res.redirect(deepLink)
+  } catch (err) {
+    console.error('Error in /callback handler:', err)
+    res.redirect('pasa-mediaplayer://signin-with-apple/callback?success=false')
+  }
+})
+
+/*app.post('/callback', bodyParser.urlencoded({
   extended: true
 }), (req, res) => {
   console.log('--- /callback HIT ---');
@@ -97,7 +140,7 @@ app.post('/callback', bodyParser.urlencoded({
     console.error("ERROR in /callback:", err);
     res.redirect('?success=false');
   }
-});
+});/*
   
   /*if (res.statusCode == 200) {
     var returnURL = ""
