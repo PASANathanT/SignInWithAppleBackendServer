@@ -52,8 +52,11 @@ const getClientSecret = () => {
 
   token = jwt.sign(claims, privateKey, {
     algorithm: 'ES256',
+    expiresIn: '180d', // maximum allowed (180 days)
     header: headers
   });
+
+  console.log(token); // This is your new NON-EXPIRED developer token
 
   return token
 }
