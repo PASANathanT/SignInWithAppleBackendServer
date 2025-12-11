@@ -77,6 +77,13 @@ require('dotenv').config();
 
 const express = require('express');
 const app = express();
+const cors = require('cors');
+app.use(cors({
+  origin: 'https://pasanathant.github.io',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type']
+}));
+
 const fs = require('fs');
 const bodyParser = require('body-parser');
 
