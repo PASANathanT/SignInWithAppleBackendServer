@@ -88,8 +88,20 @@ app.use(cors({
 const fs = require('fs');
 const bodyParser = require('body-parser');
 
-// In-memory store for pairing: device_code -> user_token
+// In-memory store for pairing: device_code -> { token, createdAt }
 const tokens = {};
+const SESSION_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+// Periodically sweep out stale/expired sessions so a QR code can't be
+// linked long after it was generated, and memory doesn't grow unbounded.
+setInterval(() => {
+  const now = Date.now();
+  for (const deviceCode of Object.keys(tokens)) {
+    if (now - tokens[deviceCode].createdAt > SESSION_TTL_MS) {
+      delete tokens[deviceCode];
+    }
+  }
+}, 60 * 1000);
 
 // Middleware for JSON
 app.use(express.json());
@@ -109,7 +121,7 @@ app.post('/link-apple-token', (req, res) => {
   const { device_code, user_token } = req.body;
   console.log('POST /link-apple-token called');
   if (typeof device_code === 'string' && typeof user_token === 'string') {
-    tokens[device_code] = user_token;
+    tokens[device_code] = { token: user_token, createdAt: Date.now() };
     console.log(`Linked device_code: ${device_code} to user_token: ${user_token}`);
     res.json({ ok: true });
   } else {
@@ -126,13 +138,17 @@ app.get('/check-token', (req, res) => {
     console.log('Error: Missing device_code in GET /check-token');
     return res.status(400).json({ error: 'Missing device_code' });
   }
-  const user_token = tokens[device_code];
-  if (user_token) {
+  const entry = tokens[device_code];
+  if (entry && Date.now() - entry.createdAt > SESSION_TTL_MS) {
+    console.log(`device_code ${device_code} expired`);
+    delete tokens[device_code];
+    return res.status(404).json({ user_token: null });
+  }
+  if (entry) {
     console.log(`device_code ${device_code} found, returning user_token`);
-    res.json({ user_token });
-    // Optionally: delete after first retrieval for one-time pairing!
-    // console.log(`Deleting device_code ${device_code} from memory`);
-    // delete tokens[device_code];
+    res.json({ user_token: entry.token });
+    // One-time pairing: the app only needs this token once.
+    delete tokens[device_code];
   } else {
     console.log(`device_code ${device_code} not found`);
     res.status(404).json({ user_token: null });
